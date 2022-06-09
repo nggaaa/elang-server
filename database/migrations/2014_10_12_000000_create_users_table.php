@@ -17,7 +17,9 @@ return new class extends Migration {
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->bigInteger('score');
+            $table->bigInteger('arab_score');
+            $table->bigInteger('eng_score');
+            $table->string('api_token')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

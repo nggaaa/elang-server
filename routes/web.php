@@ -3,7 +3,6 @@
 use App\Models\ConfirmationSignUp;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,7 +19,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
 Route::get('/confirmation', function (Request $req) {
+    $req->validate(["token" => "required"]);
     $token = $req->query('token');
     $user = ConfirmationSignUp::where('token', $token)->first();
     if ($user) {
@@ -28,11 +29,10 @@ Route::get('/confirmation', function (Request $req) {
             'name' => $user->name,
             'email' => $user->email,
             'email_verified_at' => now(),
-            'password' => Hash::make($user->password),
-            'score' => 0,
+            'password' => $user->password,
         ]);
         ConfirmationSignUp::where('token', $token)->delete();
-        return redirect('/')->with('success', 'Your account has been created. Please check your email to activate your account.');
+        return view('confirmation', ["err" => false]);
     }
-    return redirect('/')->with('error', 'Invalid token.');
+    return view("confirmation", ["err" => true]);
 })->name("confirmation");
