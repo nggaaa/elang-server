@@ -6,7 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class MailSignUp extends Mailable {
+class ForgotPassword extends Mailable {
     use Queueable, SerializesModels;
 
     /**
@@ -14,9 +14,7 @@ class MailSignUp extends Mailable {
      *
      * @return void
      */
-    public function __construct($email, $name, $token) {
-        $this->email = $email;
-        $this->name = $name;
+    public function __construct($token) {
         $this->token = $token;
     }
 
@@ -27,7 +25,7 @@ class MailSignUp extends Mailable {
      */
     public function build() {
         return $this->from(env("MAIL_USERNAME"), 'Elang - Konfirmasi Registrasi')
-            ->view('emails.signup_confirmation', [
+            ->view('emails.forgot_password', [
                 'token' => $this->token,
             ]);
     }

@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ForgotPassword;
 use App\Mail\MailSignUp;
 use App\Models\ConfirmationSignUp;
-use App\Models\Materi;
+use App\Models\Lesson;
+use App\Models\Quiz;
+use App\Models\Score;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -61,8 +65,24 @@ class APIController extends Controller {
         }
     }
 
+    public function forgotPassword(Request $req) {
+        $req->validate([
+            'email' => 'required|email',
+        ]);
+        $search = User::where("email", $req->email)->first();
+        if ($search) {
+            $temp_token = Str::random(60);
+            User::where("email", $req->email)->update(["temp_token" => $temp_token]);
+            Mail::to($req->email)->send(new ForgotPassword($temp_token));
+            DB::table("password_resets")->insert(["email" => $req->email, "token" => $temp_token, "created_at" => now()]);
+            return response()->json(["status" => "success", "message" => "Silahkan cek email"]);
+        } else {
+            return response()->json(["status" => "error", "message" => "Email tidak terdaftar"]);
+        }}
+
     public function cleanDB() {
         ConfirmationSignUp::truncate();
+
     }
 
     public function logout(Request $req) {
@@ -88,12 +108,68 @@ class APIController extends Controller {
             # code...
             break;
         }
-        return response()->json(Materi::where("category", $req->category)->where('minscore', '<=', $score)->get());
+        return response()->json(Lesson::where("category", $req->category)->where('minscore', '<=', $score)->get());
     }
 
     public function getQuestion(Request $req) {
         $req->validate([
-            "url"
+            "url" => "required",
         ]);
+        $data = Quiz::where("url", $req->url)->get();
+        if ($data) {
+            return $data;
+        } else {
+            return response()->json(["status" => "error", "message" => "Quiz tidak ditemukan."]);
+        }
+    }
+    public function postScore(Request $req) {
+        $req->validate([
+            "url" => "required|bail",
+            "category" => "required|bail",
+            "score" => "required",
+        ]);
+        $userData = User::where('api_token', $req->api_token)->first();
+        $id_category = intval($req->category);
+        $id_lesson = Lesson::where("url", $req->url)->first()->id;
+        $search = Score::where("id_user", $userData->id)->where("id_category", $id_category)->where("id_lesson", $id_lesson)->first();
+
+        if ($search) {
+            if ($req->score > $search->score) {
+                Score::where("id_user", $userData->id)->where("id_category", $id_category)->where("id_lesson", $id_lesson)->update(["score" => $req->score]);
+            } else {
+                Score::where("id_user", $userData->id)->where("id_category", $id_category)->where("id_lesson", $id_lesson)->update(["score" => $search->score]);
+            }
+        } else {
+            Score::create([
+                "id_category" => $req->category,
+                "id_user" => $userData->id,
+                "id_lesson" => $id_lesson,
+                "score" => $req->score,
+            ]);
+        }
+        $arabScore = 0;
+        $engScore = 0;
+        $xi = Score::where("id_user", $userData->id)->where("id_category", $id_category)->get();
+
+        foreach ($xi as $x) {
+            switch ($x->id_category == 1) {
+            case 1:
+                $engScore += intval($x->score);
+                break;
+            case 2:
+                $arabScore += intval($x->score);
+                break;
+
+            default:
+                # code...
+                break;
+            }
+        }
+
+        User::where("api_token", $req->api_token)->update([
+            "arab_score" => $arabScore,
+            "eng_score" => $engScore,
+        ]);
+        return response()->json(["status" => "success", "message" => "Score berhasil disimpan"]);
     }
 }

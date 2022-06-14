@@ -11,13 +11,15 @@ return new class extends Migration {
      * @return void
      */
     public function up() {
-        Schema::create('materis', function (Blueprint $table) {
+        Schema::create('quizzes', function (Blueprint $table) {
             $table->id();
-            $table->string("title");
-            $table->string("url");
-            $table->integer("category");
-            $table->bigInteger("duration");
-            $table->bigInteger("minscore");
+            $table->string('url')->unique();
+            $table->longText('question');
+            $table->longText('a_option');
+            $table->longText('b_option');
+            $table->longText('c_option');
+            $table->longText('d_option');
+            $table->text('answer');
             $table->timestamps();
         });
     }
@@ -28,6 +30,6 @@ return new class extends Migration {
      * @return void
      */
     public function down() {
-        Schema::dropIfExists('materis');
+        Schema::dropIfExists('quizzes');
     }
 };
